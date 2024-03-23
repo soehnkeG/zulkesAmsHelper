@@ -1,2 +1,3 @@
-/node_modules
-/mapOutput/*
+node_modules
+mapOutput
+idea
