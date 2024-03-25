@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const mineflayer = require('mineflayer');
 const {mapDownloader} = require('mineflayer-item-map-downloader')
-const {refactorImage} = require("./util/SharpMapHandler")
+const {preprocessImage, segmentImage, normalizeRotation} = require("./util/imageHandler")
 
 function loadConfig() {
     try {
@@ -66,10 +66,43 @@ async function initBot() {
     bot.on('end', console.log)
 }
 
-
-initBot();
+testOcrProcess();
 
 function readMap(options) {
     console.log(options.name); //logging file name
     // refactorImage(options.name);
+}
+
+
+async function testOcrProcess() {
+    const directory = "maps";
+
+    await fs.readdir(directory, await async function (err, files) {
+        const result = [];
+
+        // Handling error
+        if (err) {
+            return console.log('Unable to scan directory: ' + err);
+        }
+
+        for (let file of files) {
+            if (file.endsWith('.png')) {
+                // Log file path
+                const img = path.join(directory, file);
+
+                const preprocessedImage = await preprocessImage(img);
+                const segmentedImagePaths = await segmentImage(preprocessedImage);
+
+                for (let sp of segmentedImagePaths) {
+                    console.log("Normalized Path: ", sp)
+                    const x = await normalizeRotation(sp);
+                    console.log("normalizedRotationImage: ", x)
+                }
+
+                // const res = text.replaceAll('\n', '');
+                // result.push({text: text, expected: expectedText});
+            }
+        }
+
+    });
 }
