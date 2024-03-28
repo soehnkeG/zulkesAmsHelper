@@ -3,6 +3,9 @@ const path = require('path');
 const mineflayer = require('mineflayer');
 const {mapDownloader} = require('mineflayer-item-map-downloader')
 const {preprocessImage, segmentImage, normalizeRotation} = require("./util/imageHandler")
+const {recognize} = require("./util/ocrHandler");
+const {post} = require("axios");
+const axios = require("axios");
 
 function loadConfig() {
     try {
@@ -75,34 +78,64 @@ function readMap(options) {
 
 
 async function testOcrProcess() {
-    const directory = "maps";
+    try {
+        const apiEndpoint = "http://127.0.0.1:5000/solve"
+        const directory = "maps/captchas";
 
-    await fs.readdir(directory, await async function (err, files) {
-        const result = [];
+        await fs.readdir(directory, await async function (err, files) {
+            const result = [];
 
-        // Handling error
-        if (err) {
-            return console.log('Unable to scan directory: ' + err);
-        }
+            // Handling error
+            if (err) {
+                return console.log('Unable to scan directory: ' + err);
+            }
 
-        for (let file of files) {
-            if (file.endsWith('.png')) {
-                // Log file path
-                const img = path.join(directory, file);
-
+            // for (let file of files) {
+            if (files[17].endsWith('.png')) {
+                const img = path.join(directory, files[17]);
                 const preprocessedImage = await preprocessImage(img);
-                const segmentedImagePaths = await segmentImage(preprocessedImage);
 
-                for (let sp of segmentedImagePaths) {
-                    console.log("Normalized Path: ", sp)
-                    const x = await normalizeRotation(sp);
-                    console.log("normalizedRotationImage: ", x)
-                }
+                const base64Image = base64_encode(preprocessedImage);
+
+                const response = await axios.post(apiEndpoint, {image: base64Image}, {
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+
+                // console.log("RESPONSE: ", response)
+
+
+                // const parsed = await recognize(preprocessedImage)
+                // console.log({parsed: parsed, file: files[0]})
+
+                // const segmentedImagePaths = await segmentImage(preprocessedImage);
+                // let text = "";
+                // for (let sp of segmentedImagePaths) {
+                //     // const normalizedRotationPath = await normalizeRotation(sp);
+                //
+                //     const parsed = await recognize(sp)
+                //     if (parsed && (parsed !== "" || parsed !== " ")) {
+                //         text += parsed
+                //     }
+                // }
+                // console.log({parsed: text, file: file})
 
                 // const res = text.replaceAll('\n', '');
                 // result.push({text: text, expected: expectedText});
             }
-        }
+            // }
 
-    });
+        });
+
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+function base64_encode(file) {
+    const bitmap = fs.readFileSync(file);
+    const base64Image = Buffer.from(bitmap).toString('base64');
+    const dataUri = `data:image/png;base64,${base64Image}`; // Adjust image/png to your image type if needed
+    return base64Image;
 }

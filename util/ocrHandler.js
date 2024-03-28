@@ -1,7 +1,7 @@
 const {createWorker} = require("tesseract.js");
 
 async function recognize(imagePath) {
-    const worker = await createWorker("eng");
+    const worker = await createWorker("eng", 2);
     worker.setParameters(
         {
             tessedit_char_whitelist: '0123456789',
@@ -11,7 +11,7 @@ async function recognize(imagePath) {
     const {
         data: {text},
     } = await worker.recognize(
-        sharpOutputPath,
+        imagePath,
         {
             rotateAuto: true, rotateRadians: 5
         },

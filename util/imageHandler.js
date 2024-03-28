@@ -8,12 +8,11 @@ const {getPixelColor} = require("jimp");
  * Receiving the image and trying to remove the thin lines in the background
  * */
 async function preprocessImage(fileName) {
+    console.log("FILENAME: ", fileName)
 
-    const output =
-        fileName.split("/")[0] +
-        "/preprocessed/" +
-        fileName.split("/")[1];
+    const output = fileName.replace(`captchas/${path.basename(fileName)}`, `preprocessed/${path.basename(fileName)}`)
 
+    console.log("OUTPUT: ", output)
 
     const rectangleWidth = 512;
     const rectangleHeight = 512;
@@ -25,29 +24,28 @@ async function preprocessImage(fileName) {
     </svg>`
     );
 
+    const img = await sharp(fileName)
+        .resize(512).composite([
+            {input: rectangle, top: 0, left: 0}
+        ])
+        .sharpen({
+            sigma: 10
+        })
+        .median(10)
+        .modulate({
+            lightness: 65,
+        })
+        .normalise({
+            upper: 60,
+        })
+        .threshold(140)
+        .toFile(output);
+
     // const img = await sharp(fileName)
-    //     .resize(512).composite([
-    //         {input: rectangle, top: 128, left: 0}
-    //     ])
-    //     .sharpen({
-    //         sigma: 10
-    //     })
-    //     .median(5)
-    //     .modulate({
-    //         lightness: 65,
-    //     })
-    //     .normalise({
-    //         upper: 60,
-    //     })
+    //     .resize(512)
     //     .grayscale(true)
     //     .threshold(253)
-    //     .toFile(sharpOutputPath);
-
-    const img = await sharp(fileName)
-        .resize(512)
-        .grayscale(true)
-        .threshold(253)
-        .toFile(output);
+    //     .toFile(output);
 
     return output;
 }
@@ -81,15 +79,16 @@ async function segmentImage(fileName) {
             }
         }
 
-        console.log("segments: ", segments)
-
         segments.forEach((seg, index) => {
             const outPath = output.replace('.png', `_${index}.png`)
-
-            image.clone().crop(seg.s, 0, seg.e - seg.s, height)
-                .write(outPath);
-
-            result.push(outPath)
+            const croppedImage = image.clone().crop(seg.s, 0, seg.e - seg.s, height);
+            const segWidth = croppedImage.width;
+            console.log("WDITH: ", segWidth)
+            const segHeight = croppedImage.height;
+            if (segWidth > 6) {
+                croppedImage.write(outPath);
+                result.push(outPath)
+            }
         })
     }).catch(err => {
         console.error(err);
